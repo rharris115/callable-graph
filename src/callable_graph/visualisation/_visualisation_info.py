@@ -3,7 +3,7 @@ from collections import defaultdict
 from enum import Enum
 from typing import get_args, get_origin, Optional
 from colour import Color
-from akita_callable.callable import CallableGraphWithTimings
+from callable_graph.callable import CallableGraphWithTimings
 
 
 class Orientation(str, Enum):

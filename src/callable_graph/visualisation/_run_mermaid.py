@@ -1,9 +1,9 @@
 import importlib
 from io import TextIOWrapper
-from akita_callable.callable import CallableGraphWithTimings
+from callable_graph.callable import CallableGraphWithTimings
 import click
 
-from akita_callable.visualisation._mermaid import (
+from callable_graph.visualisation._mermaid import (
     Orientation,
     to_mermaid,
 )

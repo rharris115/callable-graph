@@ -1,5 +1,5 @@
-from akita_callable.callable import LeftCompositionWithTimings, CallableGraphWithTimings
-from akita_callable.execution_log import ExecutionLog
+from callable_graph.callable import LeftCompositionWithTimings, CallableGraphWithTimings
+from callable_graph.execution_log import ExecutionLog
 
 
 def test_execution_log_for_left_composition():

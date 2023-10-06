@@ -2,7 +2,7 @@ from typing import Callable, Tuple, Any, Dict
 
 import pytest
 
-from akita_callable.callable import LeftCompositionWithTimings, CallableGraphWithTimings
+from callable_graph.callable import LeftCompositionWithTimings, CallableGraphWithTimings
 
 
 @pytest.mark.parametrize(

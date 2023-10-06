@@ -3,9 +3,9 @@ from typing import Optional
 
 from graphviz import Digraph
 
-from akita_callable.callable import CallableGraphWithTimings
-from akita_callable.execution_log import function_str
-from akita_callable.visualisation._visualisation_info import (
+from callable_graph.callable import CallableGraphWithTimings
+from callable_graph.execution_log import function_str
+from callable_graph.visualisation._visualisation_info import (
     Orientation,
     StyleClass,
     SubgraphInfo,
