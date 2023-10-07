@@ -1,9 +1,9 @@
 from io import TextIOWrapper
 from typing import Optional
 
-from callable_graph.callable import CallableGraphWithTimings
-from callable_graph.execution_log import function_str
+from callable_graph.callable import CallableGraph
 from callable_graph.visualisation._visualisation_info import (
+    function_str,
     Orientation,
     SubgraphInfo,
     TypeNames,
@@ -26,7 +26,7 @@ class FunctionLabeller:
 
 
 class DataNodeLabeller:
-    def __init__(self, graph: CallableGraphWithTimings):
+    def __init__(self, graph: CallableGraph):
         self.graph = graph
         self.labelled = set()
         self.type_names = TypeNames.from_graph(graph=graph)
@@ -55,13 +55,12 @@ class SubgraphLabeller:
 
 
 def to_mermaid(
-    graph: CallableGraphWithTimings,
+    graph: CallableGraph,
     out: TextIOWrapper,
     orientation: Orientation = Orientation.LEFT_TO_RIGHT,
     colours: Optional[dict[StyleClass, str]] = None,
     alphas: Optional[dict[StyleClass, float]] = None,
 ):
-
     subgraph_info = SubgraphInfo.from_graph(graph=graph)
 
     function_labeller = FunctionLabeller()

@@ -3,9 +3,9 @@ from typing import Optional
 
 from graphviz import Digraph
 
-from callable_graph.callable import CallableGraphWithTimings
-from callable_graph.execution_log import function_str
+from callable_graph.callable import CallableGraph
 from callable_graph.visualisation._visualisation_info import (
+    function_str,
     Orientation,
     StyleClass,
     SubgraphInfo,
@@ -15,7 +15,7 @@ from callable_graph.visualisation._visualisation_info import (
 
 
 class DataNodeLabeller:
-    def __init__(self, graph: CallableGraphWithTimings):
+    def __init__(self, graph: CallableGraph):
         self.type_names = TypeNames.from_graph(graph=graph)
 
     def __call__(self, data_node: str) -> str:
@@ -30,7 +30,7 @@ def function_id(edge_index: int, f_index: int) -> str:
 
 
 def to_graphviz(
-    graph: CallableGraphWithTimings,
+    graph: CallableGraph,
     orientation: Orientation = Orientation.LEFT_TO_RIGHT,
     colours: Optional[dict[StyleClass, str]] = None,
     alphas: Optional[dict[StyleClass, float]] = None,
@@ -75,7 +75,6 @@ def to_graphviz(
 
         # Draw the function Nodes
         for f_index, f in functions_and_indexes:
-
             intermediate_visualisation.node(
                 name=function_id(edge_index=edge_index, f_index=f_index),
                 label=function_str(function=f),

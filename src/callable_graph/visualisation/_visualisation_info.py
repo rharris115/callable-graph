@@ -3,7 +3,14 @@ from collections import defaultdict
 from enum import Enum
 from typing import get_args, get_origin, Optional
 from colour import Color
-from callable_graph.callable import CallableGraphWithTimings
+from callable_graph.callable import CallableGraph
+from typing import Callable
+
+
+def function_str(function: Callable) -> str:
+    if not hasattr(function, "__qualname__"):
+        return str(function)
+    return function.__qualname__
 
 
 class Orientation(str, Enum):
@@ -26,7 +33,7 @@ class StyleClass(str, Enum):
     RETURNED = "rs"
 
     @staticmethod
-    def resolve_data_node(data_node: str, graph: CallableGraphWithTimings):
+    def resolve_data_node(data_node: str, graph: CallableGraph):
         if data_node in graph.returned_outputs:
             return StyleClass.RETURNED
         elif data_node in graph.required_kwargs:
@@ -38,7 +45,6 @@ class StyleClass(str, Enum):
 
 
 class ColorCalculator:
-
     DEFAULT_STYLE_COLOURS: dict[StyleClass, str] = {
         StyleClass.KEYWORD: "green",
         StyleClass.INTERMEDIATE: "yellow",
@@ -114,7 +120,7 @@ class SubgraphInfo:
         return frozenset((self._subgraph_inputs | self._subgraph_outputs).keys())
 
     @classmethod
-    def from_graph(cls, graph: CallableGraphWithTimings) -> "SubgraphInfo":
+    def from_graph(cls, graph: CallableGraph) -> "SubgraphInfo":
         subgraph_data_nodes = defaultdict(set)
         data_node_subgraphs = defaultdict(set)
         for edge in graph.edges:
@@ -191,7 +197,7 @@ class TypeNames:
         return str(t)
 
     @classmethod
-    def from_graph(cls, graph: CallableGraphWithTimings):
+    def from_graph(cls, graph: CallableGraph):
         types_by_data_node = defaultdict(set)
         for edge in graph.edges:
             for data_node, t in TypeNames._infer_input_types(edge=edge).items():
@@ -201,7 +207,7 @@ class TypeNames:
         return cls(types_by_data_node=types_by_data_node)
 
     @staticmethod
-    def _infer_input_types(edge: CallableGraphWithTimings.Edge) -> dict[str, type]:
+    def _infer_input_types(edge: CallableGraph.Edge) -> dict[str, type]:
         first = edge.funcs[0]
 
         if inspect.isbuiltin(first):
@@ -244,7 +250,7 @@ class TypeNames:
         return input_types
 
     @staticmethod
-    def _infer_output_types(edge: CallableGraphWithTimings.Edge) -> dict[str, type]:
+    def _infer_output_types(edge: CallableGraph.Edge) -> dict[str, type]:
         last = edge.funcs[-1]
         if inspect.isclass(last) and len(edge.outputs) == 1:
             return {edge.outputs[0]: last}

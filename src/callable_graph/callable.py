@@ -1,6 +1,4 @@
-from contextlib import AbstractContextManager
 from dataclasses import dataclass
-from time import perf_counter
 from typing import (
     Callable,
     Any,
@@ -10,59 +8,27 @@ from typing import (
 )
 
 
-class _ReusableTimer(AbstractContextManager):
-    def __init__(self):
-        self._start: Optional[float] = None
-        self._elapsed: Optional[float] = None
-
-    def __enter__(self):
-        assert self._start == None, "_start is not None."
-
-        self._start = perf_counter()
-        self._elapsed = None
-
-        return super().__enter__()
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        assert self._start != None, "_start is None."
-
-        self._elapsed = perf_counter() - self._start
-        self._start = None
-
-    @property
-    def elapsed(self) -> Optional[float]:
-        return self._elapsed
-
-
 def _pipe(
     *funcs: Callable,
     args: tuple = tuple(),
     kwargs: dict[str, Any] = None,
-) -> tuple[Any, list[tuple[Callable, float]]]:
+) -> Any:
     if kwargs is None:
         kwargs = {}
 
-    assert len(funcs) > 0, "No functions specified."
-
-    execution_times: list[tuple[Callable, float]] = []
+    assert funcs, "No functions specified."
 
     first, *rest = funcs
 
-    timer = _ReusableTimer()
-
-    with timer:
-        ret = first(*args, **kwargs)
-    execution_times.append((first, timer.elapsed))
+    ret = first(*args, **kwargs)
 
     for func in rest:
-        with timer:
-            ret = func(ret)
-        execution_times.append((func, timer.elapsed))
+        ret = func(ret)
 
-    return ret, execution_times
+    return ret
 
 
-class LeftCompositionWithTimings:
+class LeftComposition:
     """
     A function composition that returns function timings along with results.
     """
@@ -71,11 +37,11 @@ class LeftCompositionWithTimings:
         super().__init__()
         self.funcs = funcs
 
-    def __call__(self, *args, **kwargs) -> tuple[Any, list[tuple[Callable, float]]]:
+    def __call__(self, *args, **kwargs) -> Any:
         return _pipe(*self.funcs, args=args, kwargs=kwargs)
 
 
-class CallableGraphWithTimings:
+class CallableGraph:
     """
     A graph that is callable. Each node serves as a string reference to either a keyword input or an intermediate or
     final output. Each edge is a function or composition of functions that are applied to specific nodes to produce
@@ -92,7 +58,7 @@ class CallableGraphWithTimings:
 
     class Builder:
         def __init__(self):
-            self._edges: list[CallableGraphWithTimings.Edge] = []
+            self._edges: list[CallableGraph.Edge] = []
             self._returned_outputs: tuple[str] = tuple()
 
         def with_edge(
@@ -101,7 +67,7 @@ class CallableGraphWithTimings:
             inputs: Union[str, Sequence[str]],
             outputs: Union[str, Sequence[str]],
             subgraph_name: Optional[str] = None,
-        ) -> "CallableGraphWithTimings.Builder":
+        ) -> "CallableGraph.Builder":
             """
             Add an edge to the graph.
 
@@ -111,7 +77,7 @@ class CallableGraphWithTimings:
             :param subgraph_name: the subgroup of the edge
             :return: the graph builder
             """
-            assert len(funcs) > 0, "No functions specified."
+            assert funcs, "No functions specified."
 
             if isinstance(inputs, str):
                 inputs = [inputs]
@@ -126,7 +92,7 @@ class CallableGraphWithTimings:
                 ), f"Outputs cannot be re-calculated. re-calculated = {overwritten_outputs}"
 
             self._edges.append(
-                CallableGraphWithTimings.Edge(
+                CallableGraph.Edge(
                     funcs=funcs,
                     inputs=tuple(inputs),
                     outputs=tuple(outputs),
@@ -136,8 +102,8 @@ class CallableGraphWithTimings:
             return self
 
         def with_subgraph(
-            self, other: "CallableGraphWithTimings.Builder", name: str
-        ) -> "CallableGraphWithTimings.Builder":
+            self, other: "CallableGraph.Builder", name: str
+        ) -> "CallableGraph.Builder":
             """
             Add all the edges of another sub-graph's builder. This subgraph must not have special returned outputs (tuple return).
             :param other: the other sub-graph builder
@@ -157,7 +123,7 @@ class CallableGraphWithTimings:
 
             return self
 
-        def and_return(self, *outputs: str) -> "CallableGraphWithTimings.Builder":
+        def and_return(self, *outputs: str) -> "CallableGraph.Builder":
             """
             Specify which nodes the graph is to return. If no specification is made a dictionary of all nodes to their associated data
             will be returns when the graph is called.
@@ -180,15 +146,13 @@ class CallableGraphWithTimings:
 
             return self
 
-        def build(self) -> "CallableGraphWithTimings":
+        def build(self) -> "CallableGraph":
             """
             Build the graph.
 
             :return: the built graph
             """
-            return CallableGraphWithTimings(
-                *self._edges, returned_outputs=self._returned_outputs
-            )
+            return CallableGraph(*self._edges, returned_outputs=self._returned_outputs)
 
     def __init__(self, *edges: Edge, returned_outputs: tuple[str]):
         super().__init__()
@@ -229,48 +193,40 @@ class CallableGraphWithTimings:
         return self._outputs.difference(self._inputs)
 
     @staticmethod
-    def builder() -> "CallableGraphWithTimings.Builder":
-        return CallableGraphWithTimings.Builder()
+    def builder() -> "CallableGraph.Builder":
+        return CallableGraph.Builder()
 
-    def __call__(
-        self, **kwargs: Any
-    ) -> tuple[Union[dict[str, Any], tuple, Any], list[tuple[Callable, float]]]:
+    def __call__(self, **kwargs: Any) -> Union[dict[str, Any], tuple, Any]:
         kwarg_keys = {*kwargs.keys()}
         _required_kwargs = self.required_kwargs
 
         missing_kwargs = _required_kwargs.difference(kwarg_keys)
         assert not missing_kwargs, f"Missing key word arguments {missing_kwargs}."
 
-        edges_to_process: set[CallableGraphWithTimings.Edge] = {*self._edges}
+        edges_to_process: set[CallableGraph.Edge] = {*self._edges}
         data = {**kwargs}
-
-        execution_times = []
 
         while edges_to_process:
             processed_edges = set()
             for edge in edges_to_process:
                 if {*edge.inputs}.issubset(data.keys()):
-
-                    ret, pipe_execution_times = _pipe(
+                    ret = _pipe(
                         *edge.funcs, args=tuple(data[input] for input in edge.inputs)
                     )
 
                     if len(edge.outputs) == 1:
                         data[edge.outputs[0]] = ret
                     elif len(edge.outputs) > 1:
-                        data.update(zip(edge.outputs, ret))
+                        data |= zip(edge.outputs, ret)
 
                     processed_edges.add(edge)
-                    execution_times += pipe_execution_times
 
             edges_to_process.difference_update(processed_edges)
 
         if len(self._returned_outputs) == 1:
-            return data[self._returned_outputs[0]], execution_times
+            return data[self._returned_outputs[0]]
         elif self._returned_outputs:
-            return (
-                tuple(data[output] for output in self._returned_outputs),
-                execution_times,
-            )
+            return (tuple(data[output] for output in self._returned_outputs),)
+
         else:
-            return data, execution_times
+            return data

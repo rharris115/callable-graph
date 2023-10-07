@@ -1,6 +1,6 @@
 import importlib
 from io import TextIOWrapper
-from callable_graph.callable import CallableGraphWithTimings
+from callable_graph.callable import CallableGraph
 import click
 
 from callable_graph.visualisation._mermaid import (
@@ -47,9 +47,9 @@ def main(module_or_graph: str, out: TextIOWrapper, orientation: Orientation):
 
     for possible_graph_name, possible_graph in possible_graphs.items():
         graph = None
-        if isinstance(possible_graph, CallableGraphWithTimings):
+        if isinstance(possible_graph, CallableGraph):
             graph = possible_graph
-        elif isinstance(possible_graph, CallableGraphWithTimings.Builder):
+        elif isinstance(possible_graph, CallableGraph.Builder):
             graph = possible_graph.build()
             possible_graph_name += ".build()"
         if graph is None:
