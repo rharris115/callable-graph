@@ -7,14 +7,15 @@ from typing import (
 
 
 def _pipe(
-        *funcs: Callable,
-        args: tuple = (),
-        kwargs: dict[str, Any] = None,
+    *funcs: Callable,
+    args: tuple = (),
+    kwargs: dict[str, Any] = None,
 ) -> Any:
     if kwargs is None:
         kwargs = {}
 
-    assert funcs, "No functions specified."
+    if not funcs:
+        raise ValueError("No functions specified.")
 
     first, *rest = funcs
 
@@ -32,7 +33,6 @@ class LeftComposition:
     """
 
     def __init__(self, *funcs: Callable):
-        super().__init__()
         self.funcs = funcs
 
     def __call__(self, *args, **kwargs) -> Any:
@@ -60,11 +60,11 @@ class CallableGraph:
             self._returned_outputs: tuple[str] = ()
 
         def with_edge(
-                self,
-                *funcs: Callable,
-                inputs: str | Sequence[str],
-                outputs: str | Sequence[str],
-                subgraph_name: str | None = None,
+            self,
+            *funcs: Callable,
+            inputs: str | Sequence[str],
+            outputs: str | Sequence[str],
+            subgraph_name: str | None = None,
         ) -> "CallableGraph.Builder":
             """
             Add an edge to the graph.
@@ -75,7 +75,8 @@ class CallableGraph:
             :param subgraph_name: the subgroup of the edge
             :return: the graph builder
             """
-            assert funcs, "No functions specified."
+            if not funcs:
+                raise ValueError("No functions specified.")
 
             if isinstance(inputs, str):
                 inputs = [inputs]
@@ -84,10 +85,10 @@ class CallableGraph:
 
             outputs_set = {*outputs}
             for edge in self._edges:
-                overwritten_outputs = outputs_set.intersection(edge.outputs)
-                assert (
-                    not overwritten_outputs
-                ), f"Outputs cannot be re-calculated. re-calculated = {overwritten_outputs}"
+                if overwritten_outputs := outputs_set.intersection(edge.outputs):
+                    raise ValueError(
+                        f"Outputs cannot be re-calculated. re-calculated = {overwritten_outputs}"
+                    )
 
             self._edges.append(
                 CallableGraph.Edge(
@@ -107,9 +108,10 @@ class CallableGraph:
             :param other: the other sub-graph builder
             :return: the graph builder
             """
-            assert (
-                not other._returned_outputs
-            ), f"The sub-graph must have no special returned outputs. other._returned_outputs={other._returned_outputs}"
+            if other._returned_outputs:
+                raise ValueError(
+                    "The sub-graph must have no special returned outputs. other._returned_outputs={other._returned_outputs}"
+                )
 
             for edge in other._edges:
                 self.with_edge(
@@ -132,13 +134,13 @@ class CallableGraph:
             :param outputs: those nodes that the built graph will return
             :return: the graph builder
             """
-            outputs_set = {*outputs}
             all_nodes_set = {
                 node for edge in self._edges for node in {*edge.inputs, *edge.outputs}
             }
-            assert outputs_set.issubset(
-                all_nodes_set
-            ), f"Outputs not present, {outputs_set - all_nodes_set}."
+
+            outputs_set = {*outputs}
+            if not outputs_set.issubset(all_nodes_set):
+                raise ValueError(f"Outputs not present, {outputs_set - all_nodes_set}.")
 
             self._returned_outputs = outputs
 
@@ -153,18 +155,10 @@ class CallableGraph:
             return CallableGraph(*self._edges, returned_outputs=self._returned_outputs)
 
     def __init__(self, *edges: Edge, returned_outputs: tuple[str]):
-        super().__init__()
-
         self._edges = edges
-
-        self._inputs: frozenset[str] = frozenset(
-            input for edge in edges for input in edge.inputs
-        )
-        self._outputs: frozenset[str] = frozenset(
-            output for edge in edges for output in edge.outputs
-        )
-
-        self._returned_outputs: tuple[str] = returned_outputs
+        self._inputs = frozenset(input for edge in edges for input in edge.inputs)
+        self._outputs = frozenset(output for edge in edges for output in edge.outputs)
+        self._returned_outputs = returned_outputs
 
     @property
     def inputs(self) -> frozenset[str]:
@@ -195,11 +189,8 @@ class CallableGraph:
         return CallableGraph.Builder()
 
     def __call__(self, **kwargs: Any) -> dict[str, Any] | tuple | Any:
-        kwarg_keys = {*kwargs.keys()}
-        _required_kwargs = self.required_kwargs
-
-        missing_kwargs = _required_kwargs.difference(kwarg_keys)
-        assert not missing_kwargs, f"Missing key word arguments {missing_kwargs}."
+        if missing_kwargs := self.required_kwargs - {*kwargs.keys()}:
+            raise ValueError(f"Missing key word arguments {missing_kwargs}.")
 
         edges_to_process: set[CallableGraph.Edge] = {*self._edges}
         data = {**kwargs}
@@ -207,16 +198,14 @@ class CallableGraph:
         while edges_to_process:
             processed_edges = set()
             for edge in edges_to_process:
-                if {*edge.inputs}.issubset(data.keys()):
+                if {*edge.inputs}.issubset(data):
                     ret = _pipe(
                         *edge.funcs, args=tuple(data[input] for input in edge.inputs)
                     )
-
                     if len(edge.outputs) == 1:
                         data[edge.outputs[0]] = ret
                     elif len(edge.outputs) > 1:
                         data |= zip(edge.outputs, ret)
-
                     processed_edges.add(edge)
 
             edges_to_process.difference_update(processed_edges)
