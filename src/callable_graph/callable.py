@@ -2,16 +2,14 @@ from dataclasses import dataclass
 from typing import (
     Callable,
     Any,
-    Union,
     Sequence,
-    Optional,
 )
 
 
 def _pipe(
-    *funcs: Callable,
-    args: tuple = tuple(),
-    kwargs: dict[str, Any] = None,
+        *funcs: Callable,
+        args: tuple = (),
+        kwargs: dict[str, Any] = None,
 ) -> Any:
     if kwargs is None:
         kwargs = {}
@@ -54,19 +52,19 @@ class CallableGraph:
         funcs: tuple[Callable, ...]
         inputs: tuple[str]
         outputs: tuple[str]
-        subgraph_name: Optional[str]
+        subgraph_name: str | None
 
     class Builder:
         def __init__(self):
             self._edges: list[CallableGraph.Edge] = []
-            self._returned_outputs: tuple[str] = tuple()
+            self._returned_outputs: tuple[str] = ()
 
         def with_edge(
-            self,
-            *funcs: Callable,
-            inputs: Union[str, Sequence[str]],
-            outputs: Union[str, Sequence[str]],
-            subgraph_name: Optional[str] = None,
+                self,
+                *funcs: Callable,
+                inputs: str | Sequence[str],
+                outputs: str | Sequence[str],
+                subgraph_name: str | None = None,
         ) -> "CallableGraph.Builder":
             """
             Add an edge to the graph.
@@ -196,7 +194,7 @@ class CallableGraph:
     def builder() -> "CallableGraph.Builder":
         return CallableGraph.Builder()
 
-    def __call__(self, **kwargs: Any) -> Union[dict[str, Any], tuple, Any]:
+    def __call__(self, **kwargs: Any) -> dict[str, Any] | tuple | Any:
         kwarg_keys = {*kwargs.keys()}
         _required_kwargs = self.required_kwargs
 
@@ -226,7 +224,6 @@ class CallableGraph:
         if len(self._returned_outputs) == 1:
             return data[self._returned_outputs[0]]
         elif self._returned_outputs:
-            return (tuple(data[output] for output in self._returned_outputs),)
-
+            return tuple(data[output] for output in self._returned_outputs)
         else:
             return data
