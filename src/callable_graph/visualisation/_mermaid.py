@@ -1,5 +1,4 @@
 from io import TextIOWrapper
-from typing import Optional
 
 from callable_graph.callable import CallableGraph
 from callable_graph.visualisation._visualisation_info import (
@@ -58,8 +57,8 @@ def to_mermaid(
     graph: CallableGraph,
     out: TextIOWrapper,
     orientation: Orientation = Orientation.LEFT_TO_RIGHT,
-    colours: Optional[dict[StyleClass, str]] = None,
-    alphas: Optional[dict[StyleClass, float]] = None,
+    colours: dict[StyleClass, str] | None = None,
+    alphas: dict[StyleClass, float] | None = None,
 ):
     subgraph_info = SubgraphInfo.from_graph(graph=graph)
 

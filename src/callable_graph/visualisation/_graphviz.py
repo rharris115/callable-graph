@@ -1,5 +1,4 @@
 from textwrap import fill
-from typing import Optional
 
 from graphviz import Digraph
 
@@ -20,7 +19,7 @@ class DataNodeLabeller:
 
     def __call__(self, data_node: str) -> str:
         type_string = self.type_names(data_node=data_node)
-        type_string = ": " + type_string if type_string else ""
+        type_string = f": {type_string}" if type_string else ""
 
         return fill(f"{data_node}{type_string}")
 
@@ -32,8 +31,8 @@ def function_id(edge_index: int, f_index: int) -> str:
 def to_graphviz(
     graph: CallableGraph,
     orientation: Orientation = Orientation.LEFT_TO_RIGHT,
-    colours: Optional[dict[StyleClass, str]] = None,
-    alphas: Optional[dict[StyleClass, float]] = None,
+    colours: dict[StyleClass, str] | None = None,
+    alphas: dict[StyleClass, float] | None = None,
 ) -> Digraph:
     subgraph_info = SubgraphInfo.from_graph(graph=graph)
 

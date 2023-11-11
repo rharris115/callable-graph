@@ -57,9 +57,9 @@ graph LR
 
   %% Subgraph Edges
   dn_inner_input["inner_input"]:::ks -.-> sg_middle{{"middle"}}:::ss
-  sg_middle -.-> dn_inner_output_1["inner_output_1: int"]:::ts
-  sg_middle -.-> dn_middle_output_0["middle_output_0: int"]:::is
   sg_middle -.-> dn_middle_output_1["middle_output_1: int"]:::ts
+  sg_middle -.-> dn_middle_output_0["middle_output_0: int"]:::is
+  sg_middle -.-> dn_inner_output_1["inner_output_1: int"]:::ts
 
   %% Top Level Edges
   dn_input_0["input_0"]:::ks --> f_4_0(["hash"]):::fs
